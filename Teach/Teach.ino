@@ -48,11 +48,7 @@ int opened = 0;
 int pos = 0;
 
 void setPinsTo(int mode, const int pins[], int count) {
-  for(int i = 0;i < count; i++) {
-    Serial.print("mode of pin ");
-    Serial.print(pins[i]);
-    Serial.print(": ");
-    Serial.println(mode);
+  for (int i = 0; i < count; i++) {
     pinMode(pins[i], mode);
   }
 }
@@ -73,7 +69,9 @@ void setup() {
 
   setPinsTo(OUTPUT, dir_pins, 6);
   setPinsTo(OUTPUT, stp_pins, 6);
-  setPinsTo(OUTPUT, (const int[]){grip}, 1);
+  setPinsTo(OUTPUT, (const int[]) {
+    grip
+  }, 1);
   setPinsTo(INPUT , joystick_key_pins, 3);
 
   calibrateJoysticks();
@@ -90,13 +88,6 @@ void a(int dir_pin, int stp_pin, bool dirValue, int spd_val, long unsigned& prev
     digitalWrite(dir_pin, dirValue);
     digitalWrite(stp_pin, step_val);
     step_val = !step_val;
-    /*
-    Serial.print("pin nummer ");
-    Serial.print("step-pin ");
-    Serial.print(stp_pin);
-    Serial.print(" dir-pin ");
-    Serial.println(dir_pin);
-    */
   }
 }
 
@@ -108,13 +99,13 @@ bool achse(int joystick_pin, int index, int offset) {
   bool valueChanged = false;
   if (analogValue > analog_mid[index] + offset) {
     int spd_val = map(analogValue, analog_mid[index], analog_max, min_spd, max_spd);
-    steps[index] +=1;
+    steps[index] += 1;
     a(dir_pins[index], stp_pins[index], PLUS, spd_val, previousMillis[index], step_val[index]);
     valueChanged = true;
   }
   if (analogValue < analog_mid[index] - offset) {
     int spd_val = map(analogValue, analog_min, analog_mid[index], max_spd, min_spd);
-    steps[index] -=1;
+    steps[index] -= 1;
     a(dir_pins[index], stp_pins[index], MINUS,  spd_val, previousMillis[index], step_val[index]);
     valueChanged = true;
   }
@@ -132,33 +123,6 @@ void loop() {
       send_pos = false;
       previousMicros = millis();
 
-      /*
-            //Analogausgabe:
-              Serial.print("Joystick-Wert 1 X ");
-              Serial.println(analogRead(joystick_x1));
-              Serial.print("Joystick-Wert 1 Y ");
-              Serial.println(analogRead(joystick_y1));
-              Serial.print("Joystick-Wert 2 X ");
-              Serial.println(analogRead(joystick_x2));
-              Serial.print("Joystick-Wert 2 Y ");
-              Serial.println(analogRead(joystick_y2));
-              Serial.print("Joystick-Wert 3 X ");
-              Serial.println(analogRead(joystick_x3));
-              Serial.print("Joystick-Wert 3 Y ");
-              Serial.println(analogRead(joystick_y3));
-              Serial.println("");
-              Serial.println("");
-              Serial.println("");
-              Serial.println("");
-              Serial.println("");
-              Serial.println("");
-              Serial.println("");
-              Serial.println("");
-              Serial.println("");
-              Serial.println("");
-              Serial.println("");
-      
-
       //Winkelausgabe:
 
       Serial.print("Achse 1 ");
@@ -173,27 +137,13 @@ void loop() {
       Serial.println(steps[4] / winkelfaktor[4]);
       Serial.print("Achse 6 ");
       Serial.println(steps[5] / winkelfaktor[5]);
-      Serial.print("Joystick-Wert 1 X ");
-      Serial.println(analogRead(joystick_x1));
-      Serial.print("Joystick-Wert 1 Y ");
-      Serial.println(analogRead(joystick_y1));
-      Serial.print("Joystick-Wert 2 X ");
-      Serial.println(analogRead(joystick_x2));
-      Serial.print("Joystick-Wert 2 Y ");
-      Serial.println(analogRead(joystick_y2));
-      Serial.print("Joystick-Wert 3 X ");
-      Serial.println(analogRead(joystick_x3));
-      Serial.print("Joystick-Wert 3 Y ");
-      Serial.println(analogRead(joystick_y3));
-      /*
-            Serial.println("");
-            Serial.println("");
-            Serial.println("");
-            Serial.println("");
-            Serial.println("");
-            Serial.println("");
-            Serial.println("");
-      */
+      Serial.println("");
+      Serial.println("");
+      Serial.println("");
+      Serial.println("");
+      Serial.println("");
+      Serial.println("");
+      Serial.println("");
     }
   }
 
