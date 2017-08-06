@@ -1,4 +1,5 @@
 #include <Servo.h>
+#include <AccelStepper.h>
 
 #define joystick_x1     A0
 #define joystick_y1     A1
@@ -24,6 +25,15 @@
 #define dir6            36
 #define grip            37
 
+
+AccelStepper achse_1(AccelStepper::DRIVER, stp1, dir1);
+AccelStepper achse_2(AccelStepper::DRIVER, stp2, dir2);
+AccelStepper achse_3(AccelStepper::DRIVER, stp3, dir3);
+AccelStepper achse_4(AccelStepper::DRIVER, stp4, dir4);
+AccelStepper achse_5(AccelStepper::DRIVER, stp5, dir5);
+AccelStepper achse_6(AccelStepper::DRIVER, stp6, dir6);
+AccelStepper achsen[6] = {achse_1, achse_2, achse_3, achse_4, achse_5, achse_6};
+
 int analog_max = 1025;
 int analog_min = 0;
 int analog_mid[6];
@@ -35,9 +45,12 @@ int offen = 1;
 int geschlossen = 0;
 int print_pos = 0;
 
+int spdfaktor[] = {10, 20, 15, 30, 8, 17};                                                   //Geschwindigkeitsfaktor pro Achse
+int accfaktor[] = {10, 40, 50, 50, 10, 30};                                                  //Beschleunigung abhängig von der Geschwindigkeit
+float winkelfaktor[] = {33, 160, 70, 23, 40, 40};
+
 float winkel[6];
 int steps[6];
-float winkelfaktor[] = {33, 160, 70, 23, 40, 40};
 unsigned long previousMillis[6];
 unsigned long previousMicros;
 bool step_val[6];
@@ -141,12 +154,12 @@ void loop() {
       Serial.println(steps[4] / winkelfaktor[4]);
       Serial.print("Achse 6 ");
       Serial.println(steps[5] / winkelfaktor[5]);
-      Serial.println("");
-      Serial.println("");
-      Serial.println("");
-      Serial.println("");
-      Serial.println("");
-      Serial.println("");
+      Serial.println(steps[0]);
+      Serial.println(steps[1]);
+      Serial.println(steps[2]);
+      Serial.println(steps[3]);
+      Serial.println(steps[4]);
+      Serial.println(steps[5]);
       Serial.println("");
     }
   }
@@ -172,4 +185,74 @@ void loop() {
       delay(5);
     }
   }
+  if (digitalRead(joystick_key1) == LOW)
+  {
+    Home();
+  }
+}
+
+void Home()
+{
+  for (int i = 0; i < 6; i++)
+  {
+    achsen[i].setCurrentPosition(steps[i]/2);
+    Serial.print("Steps ");
+    Serial.println(steps[i]);
+    achsen[i].setMaxSpeed(50 * spdfaktor[i]);
+    achsen[i].setAcceleration(50 * accfaktor[i]);
+    achsen[i].moveTo(0);
+    steps[i] = 0;
+  }
+  bool runnning = true;
+  while (runnning)
+  {
+    runnning = false;
+    for (int i = 0; i < 6; i++)
+    {
+      runnning = achsen[i].run() || runnning;
+    }
+    Serial.println(runnning);
+  }
+}
+
+int bewegung(int a_1, int a_2, int a_3, int a_4, int a_5, int a_6, int geschwindigkeit)
+{
+  winkel[1] = a_1;
+  winkel[2] = a_2;
+  winkel[3] = a_3;
+  winkel[4] = a_4;
+  winkel[5] = a_5;
+  winkel[6] = a_6;
+
+  achse_1.setMaxSpeed(geschwindigkeit * spdfaktor[1]);
+  achse_2.setMaxSpeed(geschwindigkeit * spdfaktor[2]);
+  achse_3.setMaxSpeed(geschwindigkeit * spdfaktor[3]);
+  achse_4.setMaxSpeed(geschwindigkeit * spdfaktor[4]);
+  achse_5.setMaxSpeed(geschwindigkeit * spdfaktor[5]);
+  achse_6.setMaxSpeed(geschwindigkeit * spdfaktor[6]);
+
+  achse_1.setAcceleration(geschwindigkeit * accfaktor[1]);
+  achse_2.setAcceleration(geschwindigkeit * accfaktor[2]);
+  achse_3.setAcceleration(geschwindigkeit * accfaktor[3]);
+  achse_4.setAcceleration(geschwindigkeit * accfaktor[4]);
+  achse_5.setAcceleration(geschwindigkeit * accfaktor[5]);
+  achse_6.setAcceleration(geschwindigkeit * accfaktor[6]);
+
+  achse_1.moveTo(winkel[1] * winkelfaktor[1]);
+  achse_2.moveTo(winkel[2] * winkelfaktor[2]);
+  achse_3.moveTo(winkel[3] * winkelfaktor[3]);
+  achse_4.moveTo(winkel[4] * winkelfaktor[4]);
+  achse_5.moveTo(winkel[5] * winkelfaktor[5]);
+  achse_6.moveTo(winkel[5] * winkelfaktor[6]);
+
+  do
+  {
+    achse_1.run();
+    achse_2.run();
+    achse_3.run();
+    achse_4.run();
+    achse_5.run();
+    achse_6.run();
+  }
+  while (achse_1.run() or achse_2.run() or achse_3.run() or achse_4.run() or achse_5.run() or achse_6.run());
 }
