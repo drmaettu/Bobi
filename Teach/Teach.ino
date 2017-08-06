@@ -43,8 +43,8 @@ unsigned long previousMicros;
 bool step_val[6];
 
 Servo gripper;
-int closed = 180;
-int opened = 0;
+int closed = 160;
+int opened = 20;
 int pos = 0;
 
 void setPinsTo(int mode, const int pins[], int count) {
@@ -78,6 +78,10 @@ void setup() {
 
   gripper.attach(grip);
   gripper.write(165);
+
+  digitalWrite(joystick_key1, HIGH);
+  digitalWrite(joystick_key2, HIGH);
+  digitalWrite(joystick_key3, HIGH);
 }
 
 void a(int dir_pin, int stp_pin, bool dirValue, int spd_val, long unsigned& previousMicros, bool& step_val)
@@ -147,8 +151,25 @@ void loop() {
     }
   }
 
-  for (int i = 5; i >= 0 ; i--) {
+  for (int i = 0; i < 6 ; i++) {
     bool valueChanged = achse(joysticks[i], i, 30);
     send_pos = valueChanged | send_pos;
+  }
+  if (digitalRead(joystick_key2) == LOW)
+  {
+    for (pos = opened; pos <= closed; pos += 2)
+    {
+      gripper.write(pos);
+      delay(5);
+    }
+  }
+
+  if (digitalRead(joystick_key3) == LOW)
+  {
+    for (pos = closed; pos >= opened; pos -= 2)
+    {
+      gripper.write(pos);
+      delay(5);
+    }
   }
 }
