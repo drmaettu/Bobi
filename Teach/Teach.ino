@@ -47,7 +47,7 @@ int print_pos = 0;
 
 int spdfaktor[] = {10, 20, 15, 30, 8, 17};                                                   //Geschwindigkeitsfaktor pro Achse
 int accfaktor[] = {10, 40, 50, 50, 10, 30};                                                  //Beschleunigung abhängig von der Geschwindigkeit
-float winkelfaktor[] = {33, 160, 70, 23, 40, 40};
+float winkelfaktor[] = {33, 80, 70, 23, 40, 40};
 
 float winkel[6];
 int steps[6];
@@ -154,12 +154,12 @@ void loop() {
       Serial.println(steps[4] / winkelfaktor[4]);
       Serial.print("Achse 6 ");
       Serial.println(steps[5] / winkelfaktor[5]);
-      Serial.println(steps[0]);
-      Serial.println(steps[1]);
-      Serial.println(steps[2]);
-      Serial.println(steps[3]);
-      Serial.println(steps[4]);
-      Serial.println(steps[5]);
+      Serial.println("");
+      Serial.println("");
+      Serial.println("");
+      Serial.println("");
+      Serial.println("");
+      Serial.println("");
       Serial.println("");
     }
   }
@@ -189,15 +189,21 @@ void loop() {
   {
     Home();
   }
+  if (digitalRead(joystick_key3) == LOW && digitalRead(joystick_key2) == LOW)
+  {
+    for (int i = 0; i < 6; i++)
+    {
+      steps[i] = 0;
+      delay(200);
+    }
+  }
 }
 
 void Home()
 {
   for (int i = 0; i < 6; i++)
   {
-    achsen[i].setCurrentPosition(steps[i]/2);
-    Serial.print("Steps ");
-    Serial.println(steps[i]);
+    achsen[i].setCurrentPosition(steps[i] / 2);
     achsen[i].setMaxSpeed(50 * spdfaktor[i]);
     achsen[i].setAcceleration(50 * accfaktor[i]);
     achsen[i].moveTo(0);
