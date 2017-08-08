@@ -45,9 +45,9 @@ int offen = 1;
 int geschlossen = 0;
 int print_pos = 0;
 
-int spdfaktor[] = {10, 20, 15, 30, 8, 17};                                                   //Geschwindigkeitsfaktor pro Achse
-int accfaktor[] = {10, 40, 50, 50, 10, 30};                                                  //Beschleunigung abhängig von der Geschwindigkeit
-float winkelfaktor[] = {33, 80, 70, 23, 40, 40};
+int spdfaktor[] = {20, 20, 25, 30, 30, 17};                                                   //Geschwindigkeitsfaktor pro Achse
+int accfaktor[] = {20, 40, 50, 50, 40, 30};                                                  //Beschleunigung abhängig von der Geschwindigkeit
+float winkelfaktor[] = {70, 160, 140, 98, 80, 20};
 
 float winkel[6];
 int steps[6];
@@ -194,7 +194,6 @@ void loop() {
     for (int i = 0; i < 6; i++)
     {
       steps[i] = 0;
-      delay(200);
     }
   }
 }
