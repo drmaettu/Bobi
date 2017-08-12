@@ -34,26 +34,26 @@ AccelStepper achse_5(AccelStepper::DRIVER, stp5, dir5);
 AccelStepper achse_6(AccelStepper::DRIVER, stp6, dir6);
 AccelStepper achsen[6] = {achse_1, achse_2, achse_3, achse_4, achse_5, achse_6};
 
-int analog_max = 1025;
+int analog_max = 1024;
 int analog_min = 0;
 int analog_mid[6];
-int spd_val[6];
-int max_spd = 20;
-int min_spd = 10000;
+int max_spd = 1000;
+int min_spd = 20;
 int gripper_state = 1;
 int offen = 1;
 int geschlossen = 0;
 int print_pos = 0;
+int joystick_offset = 30;
 
 int spdfaktor[] = {20, 20, 25, 30, 30, 17};                                                   //Geschwindigkeitsfaktor pro Achse
 int accfaktor[] = {20, 40, 50, 50, 40, 30};                                                  //Beschleunigung abhängig von der Geschwindigkeit
 float winkelfaktor[] = {70, 160, 140, 98, 80, 20};
-
+int analogValue[6];
+int spd_val[6];
+float posi[6];
 float winkel[6];
 int steps[6];
-unsigned long previousMillis[6];
 unsigned long previousMicros;
-bool step_val[6];
 
 Servo gripper;
 int closed = 160;
@@ -77,8 +77,13 @@ void calibrateJoysticks() {
   }
 }
 
-void setup() {
+void setup()
+{
   Serial.begin(115200);
+  for (int i = 0; i < 6; i++)
+  {
+    achsen[i].setMaxSpeed(max_spd);
+  }
 
   setPinsTo(OUTPUT, dir_pins, 6);
   setPinsTo(OUTPUT, stp_pins, 6);
@@ -97,40 +102,29 @@ void setup() {
   digitalWrite(joystick_key3, HIGH);
 }
 
-void a(int dir_pin, int stp_pin, bool dirValue, int spd_val, long unsigned& previousMicros, bool& step_val)
+void loop()
 {
-  if (micros() - previousMicros >= spd_val)
+  Position();
+  Greifer();
+  Fahren();
+  for (int i = 0; i < 6; i++)
   {
-    previousMicros = micros();
-    digitalWrite(dir_pin, dirValue);
-    digitalWrite(stp_pin, step_val);
-    step_val = !step_val;
+    posi[i] = achsen[i].currentPosition() / winkelfaktor[i];
+  }
+
+  if (digitalRead(joystick_key1) == LOW)
+  {
+    Home();
+  }
+
+  if (digitalRead(joystick_key3) == LOW && digitalRead(joystick_key2) == LOW)
+  {
+    Zero();
   }
 }
 
-const bool PLUS = HIGH;
-const bool MINUS = LOW;
-
-bool achse(int joystick_pin, int index, int offset) {
-  int analogValue = analogRead(joystick_pin);
-  bool valueChanged = false;
-  if (analogValue > analog_mid[index] + offset) {
-    int spd_val = map(analogValue, analog_mid[index], analog_max, min_spd, max_spd);
-    steps[index] += 1;
-    a(dir_pins[index], stp_pins[index], PLUS, spd_val, previousMillis[index], step_val[index]);
-    valueChanged = true;
-  }
-  if (analogValue < analog_mid[index] - offset) {
-    int spd_val = map(analogValue, analog_min, analog_mid[index], max_spd, min_spd);
-    steps[index] -= 1;
-    a(dir_pins[index], stp_pins[index], MINUS,  spd_val, previousMillis[index], step_val[index]);
-    valueChanged = true;
-  }
-  return valueChanged;
-}
-
-void loop() {
-
+void Position()
+{
   bool send_pos = true;
 
   if (millis() - previousMicros >= 1000)
@@ -143,17 +137,17 @@ void loop() {
       //Winkelausgabe:
 
       Serial.print("Achse 1 ");
-      Serial.println(steps[0] / winkelfaktor[0]);
+      Serial.println(posi[0]);
       Serial.print("Achse 2 ");
-      Serial.println(steps[1] / winkelfaktor[1]);
+      Serial.println(posi[1]);
       Serial.print("Achse 3 ");
-      Serial.println(steps[2] / winkelfaktor[2]);
+      Serial.println(posi[2]);
       Serial.print("Achse 4 ");
-      Serial.println(steps[3] / winkelfaktor[3]);
+      Serial.println(posi[3]);
       Serial.print("Achse 5 ");
-      Serial.println(steps[4] / winkelfaktor[4]);
+      Serial.println(posi[4]);
       Serial.print("Achse 6 ");
-      Serial.println(steps[5] / winkelfaktor[5]);
+      Serial.println(posi[5]);
       Serial.println("");
       Serial.println("");
       Serial.println("");
@@ -163,11 +157,9 @@ void loop() {
       Serial.println("");
     }
   }
-
-  for (int i = 0; i < 6 ; i++) {
-    bool valueChanged = achse(joysticks[i], i, 30);
-    send_pos = valueChanged | send_pos;
-  }
+}
+void Greifer()
+{
   if (digitalRead(joystick_key2) == LOW)
   {
     for (pos = opened; pos <= closed; pos += 2)
@@ -185,16 +177,36 @@ void loop() {
       delay(5);
     }
   }
-  if (digitalRead(joystick_key1) == LOW)
+}
+
+void Fahren()
+{
+  for (int i = 0; i < 6; i++)
   {
-    Home();
-  }
-  if (digitalRead(joystick_key3) == LOW && digitalRead(joystick_key2) == LOW)
-  {
-    for (int i = 0; i < 6; i++)
+    analogValue[i] = analogRead(joysticks[i]);
+
+    if (analogValue[i] > (analog_mid[i] + joystick_offset))
     {
-      steps[i] = 0;
+      spd_val[i] = map(analogValue[i], analog_mid[i], analog_max, min_spd, max_spd);
+      achsen[i].move(10);
+      achsen[i].setSpeed(spd_val[i]);
+      achsen[i].runSpeedToPosition();
     }
+    if (analogValue[i] < analog_mid[i] - joystick_offset)
+    {
+      spd_val[i] = map(analogValue[i], analog_min, analog_mid, max_spd, min_spd);
+      achsen[i].move(-10);
+      achsen[i].setSpeed(spd_val[i]);
+      achsen[i].runSpeedToPosition();
+    }
+  }
+}
+
+void Zero()
+{
+  for (int i = 0; i < 6; i++)
+  {
+    achsen[i].setCurrentPosition(0);
   }
 }
 
@@ -202,21 +214,10 @@ void Home()
 {
   for (int i = 0; i < 6; i++)
   {
-    achsen[i].setCurrentPosition(steps[i] / 2);
-    achsen[i].setMaxSpeed(50 * spdfaktor[i]);
-    achsen[i].setAcceleration(50 * accfaktor[i]);
+    achsen[i].setMaxSpeed(10000);
+    achsen[i].setAcceleration(10000);
     achsen[i].moveTo(0);
-    steps[i] = 0;
-  }
-  bool runnning = true;
-  while (runnning)
-  {
-    runnning = false;
-    for (int i = 0; i < 6; i++)
-    {
-      runnning = achsen[i].run() || runnning;
-    }
-    Serial.println(runnning);
+    achsen[i].run();
   }
 }
 
