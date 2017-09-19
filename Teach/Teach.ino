@@ -25,6 +25,7 @@
 #define dir6            36
 #define grip            37
 
+Servo gripper;
 
 AccelStepper achse_1(AccelStepper::DRIVER, stp1, dir1);
 AccelStepper achse_2(AccelStepper::DRIVER, stp2, dir2);
@@ -40,14 +41,12 @@ int analog_mid[6];
 int max_spd = 1000;
 int min_spd = 20;
 int gripper_state = 1;
-int offen = 1;
-int geschlossen = 0;
-int print_pos = 0;
 int joystick_offset = 30;
 
 int spdfaktor[] = {20, 20, 25, 30, 30, 17};                                                   //Geschwindigkeitsfaktor pro Achse
 int accfaktor[] = {20, 40, 50, 50, 40, 30};                                                  //Beschleunigung abhängig von der Geschwindigkeit
 float winkelfaktor[] = {70, 160, 140, 98, 80, 20};
+
 int analogValue[6];
 int spd_val[6];
 float posi[6];
@@ -55,27 +54,14 @@ float winkel[6];
 int steps[6];
 unsigned long previousMicros;
 
-Servo gripper;
 int closed = 160;
 int opened = 20;
-int pos = 0;
-
-void setPinsTo(int mode, const int pins[], int count) {
-  for (int i = 0; i < count; i++) {
-    pinMode(pins[i], mode);
-  }
-}
-
-int joysticks[] = {joystick_x1, joystick_y1, joystick_x2, joystick_y2, joystick_x3, joystick_y3};
+int pos = 20;
+int joysticks[] =                   {joystick_x1, joystick_y1, joystick_x2, joystick_y2, joystick_x3, joystick_y3};
 const int stp_pins[] =              {stp1, stp2, stp3, stp4, stp5, stp6};
 const int dir_pins[] =              {dir1, dir2, dir3, dir4, dir5, dir6};
 const int joystick_key_pins [] =    {joystick_key1, joystick_key2, joystick_key3};
 
-void calibrateJoysticks() {
-  for (int i = 0; i < 6; i++) {
-    analog_mid[i] = analogRead(joysticks[i]);
-  }
-}
 
 void setup()
 {
@@ -92,25 +78,20 @@ void setup()
   }, 1);
   setPinsTo(INPUT , joystick_key_pins, 3);
 
-  calibrateJoysticks();
-
   gripper.attach(grip);
-  gripper.write(165);
 
   digitalWrite(joystick_key1, HIGH);
   digitalWrite(joystick_key2, HIGH);
   digitalWrite(joystick_key3, HIGH);
+  
+  calibrateJoysticks();
 }
 
 void loop()
 {
-  Position();
+  AusgabePosition();
   Greifer();
   Fahren();
-  for (int i = 0; i < 6; i++)
-  {
-    posi[i] = achsen[i].currentPosition() / winkelfaktor[i];
-  }
 
   if (digitalRead(joystick_key1) == LOW)
   {
@@ -123,8 +104,31 @@ void loop()
   }
 }
 
-void Position()
+
+void setPinsTo(int mode, const int pins[], int count)
 {
+  for (int i = 0; i < count; i++)
+  {
+    pinMode(pins[i], mode);
+  }
+}
+
+
+void calibrateJoysticks()
+{
+  for (int i = 0; i < 6; i++) 
+  {
+    analog_mid[i] = analogRead(joysticks[i]);
+  }
+}
+
+
+void AusgabePosition()
+{
+  for (int i = 0; i < 6; i++)
+  {
+    posi[i] = achsen[i].currentPosition() / winkelfaktor[i];
+  }
   bool send_pos = true;
 
   if (millis() - previousMicros >= 1000)
@@ -158,26 +162,35 @@ void Position()
     }
   }
 }
+
 void Greifer()
 {
-  if (digitalRead(joystick_key2) == LOW)
+  if (gripper_state == 1)
   {
-    for (pos = opened; pos <= closed; pos += 2)
+    if (digitalRead(joystick_key2) == LOW)
     {
-      gripper.write(pos);
-      delay(5);
+      for (pos = opened; pos <= closed; pos += 2)
+      {
+        gripper.write(pos);
+        delay(5);
+        gripper_state = 0;
+      }
     }
   }
-
-  if (digitalRead(joystick_key3) == LOW)
+  else
   {
-    for (pos = closed; pos >= opened; pos -= 2)
+    if (digitalRead(joystick_key2) == LOW)
     {
-      gripper.write(pos);
-      delay(5);
+      for (pos = closed; pos >= opened; pos -= 2)
+      {
+        gripper.write(pos);
+        delay(5);
+        gripper_state = 1;
+      }
     }
   }
 }
+
 
 void Fahren()
 {
@@ -202,6 +215,7 @@ void Fahren()
   }
 }
 
+
 void Zero()
 {
   for (int i = 0; i < 6; i++)
@@ -209,6 +223,7 @@ void Zero()
     achsen[i].setCurrentPosition(0);
   }
 }
+
 
 void Home()
 {
@@ -220,6 +235,7 @@ void Home()
     achsen[i].run();
   }
 }
+
 
 int bewegung(int a_1, int a_2, int a_3, int a_4, int a_5, int a_6, int geschwindigkeit)
 {
