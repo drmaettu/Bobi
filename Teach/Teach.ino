@@ -100,7 +100,7 @@ void loop()
   AusgabePosition();
   Greifer();
   Fahren();
-
+  Tastenabfrage();
   
 }
 
