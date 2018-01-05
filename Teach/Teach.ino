@@ -8,27 +8,6 @@ typedef struct
   int greifer;
 } Position;
 
-void speichern(int index, Position pos)
-{
-  int addr = index * sizeof(Position);
-  uint8_t* p_pos = reinterpret_cast<char*>(&pos);
-  for (int i = 0; i < sizeof(Position); i++)
-  {
-    EEPROM.update(addr + i, *(p_pos + i));
-  }
-}
-
-void laden(int index, Position& pos)
-{
-  int addr = index * sizeof(Position);
-  uint8_t* p_pos = reinterpret_cast<char*>(&pos);
-  for (int i = 0; i < sizeof(Position); i++)
-  {
-    *(p_pos + i) = EEPROM.read(addr + i);
-  }
-}
-
-
 #define joystick_x1     A0
 #define joystick_y1     A1
 #define joystick_x2     A2
@@ -122,31 +101,7 @@ void loop()
   Greifer();
   Fahren();
 
-  if (digitalRead(joystick_key1) == LOW)
-  {
-   // Home();
-   Position pos;
-   for(int i = 0; i < 6; i++) {
-    pos.achsen[i] = achsen[i].currentPosition();
-    Serial.println("schreiben");
-    speichern(0, pos);
-    Serial.println("geschrieben");
-   }
-  }
-  if (digitalRead(joystick_key3) == LOW)
-  {
-    Position pos = { { 0, 0, 0, 0, 0, 0}, 0 };
-    Serial.println("wird geladen");
-    laden(0, pos);
-    Serial.println("geladen");
-    pos_anfahren(pos, 10);
-    Serial.println("angefahren");
-    Serial.println(pos.achsen[0]);
-  }
-  if (digitalRead(joystick_key3) == LOW && digitalRead(joystick_key2) == LOW)
-  {
-    Zero();
-  }
+  
 }
 
 
@@ -240,7 +195,39 @@ void Greifer()
   }
 }
 
-
+void Tastenabfrage()
+{
+  if (digitalRead(joystick_key1) == LOW)
+  {
+   // Home();
+   Position pos;
+   for(int i = 0; i < 6; i++) 
+   {
+    pos.achsen[i] = achsen[i].currentPosition();
+    Serial.println("schreiben");
+    speichern(0, pos);
+    Serial.println("geschrieben");
+   }
+  }
+  if (digitalRead(joystick_key3) == LOW)
+  {
+     if (millis() - previousMicros >= 1000)
+    {
+      previousMicros = millis();
+      Position pos = { { 0, 0, 0, 0, 0, 0}, 0 };
+      Serial.println("wird geladen");
+      laden(0, pos);
+      Serial.println("geladen");
+      pos_anfahren(pos, 10);
+      Serial.println("angefahren");
+      Serial.println(pos.achsen[0]);
+    }
+  }
+  if (digitalRead(joystick_key3) == LOW && digitalRead(joystick_key2) == LOW)
+  {
+    Zero();
+  }
+}
 void Fahren()
 {
   for (int i = 0; i < 6; i++)
@@ -272,7 +259,6 @@ void Zero()
     achsen[i].setCurrentPosition(0);
   }
 }
-
 
 void Home()
 {
@@ -312,3 +298,23 @@ void pos_anfahren(Position pos, int geschwindigkeit)
   } while (moving > 0);
 
 }
+void speichern(int index, Position pos)
+{
+  int addr = index * sizeof(Position);
+  uint8_t* p_pos = reinterpret_cast<char*>(&pos);
+  for (int i = 0; i < sizeof(Position); i++)
+  {
+    EEPROM.update(addr + i, *(p_pos + i));
+  }
+}
+
+void laden(int index, Position& pos)
+{
+  int addr = index * sizeof(Position);
+  uint8_t* p_pos = reinterpret_cast<char*>(&pos);
+  for (int i = 0; i < sizeof(Position); i++)
+  {
+    *(p_pos + i) = EEPROM.read(addr + i);
+  }
+}
+
