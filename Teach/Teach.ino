@@ -1,5 +1,33 @@
 #include <Servo.h>
 #include <AccelStepper.h>
+#include <EEPROM.h>
+
+typedef struct
+{
+  int achsen[6];
+  int greifer;
+} Position;
+
+void speichern(int index, Position pos)
+{
+  int addr = index * sizeof(Position);
+  uint8_t* p_pos = reinterpret_cast<char*>(&pos);
+  for (int i = 0; i < sizeof(Position); i++)
+  {
+    EEPROM.update(addr + i, *(p_pos + i));
+  }
+}
+
+void laden(int index, Position& pos)
+{
+  int addr = index * sizeof(Position);
+  uint8_t* p_pos = reinterpret_cast<char*>(&pos);
+  for (int i = 0; i < sizeof(Position); i++)
+  {
+    *(p_pos + i) = EEPROM.read(addr + i);
+  }
+}
+
 
 #define joystick_x1     A0
 #define joystick_y1     A1
@@ -83,8 +111,9 @@ void setup()
   digitalWrite(joystick_key1, HIGH);
   digitalWrite(joystick_key2, HIGH);
   digitalWrite(joystick_key3, HIGH);
-  
+
   calibrateJoysticks();
+  Serial.println("Setup gmacht");
 }
 
 void loop()
@@ -95,9 +124,25 @@ void loop()
 
   if (digitalRead(joystick_key1) == LOW)
   {
-    Home();
+   // Home();
+   Position pos;
+   for(int i = 0; i < 6; i++) {
+    pos.achsen[i] = achsen[i].currentPosition();
+    Serial.println("schreiben");
+    speichern(0, pos);
+    Serial.println("geschrieben");
+   }
   }
-
+  if (digitalRead(joystick_key3) == LOW)
+  {
+    Position pos = { { 0, 0, 0, 0, 0, 0}, 0 };
+    Serial.println("wird geladen");
+    laden(0, pos);
+    Serial.println("geladen");
+    pos_anfahren(pos, 10);
+    Serial.println("angefahren");
+    Serial.println(pos.achsen[0]);
+  }
   if (digitalRead(joystick_key3) == LOW && digitalRead(joystick_key2) == LOW)
   {
     Zero();
@@ -116,7 +161,7 @@ void setPinsTo(int mode, const int pins[], int count)
 
 void calibrateJoysticks()
 {
-  for (int i = 0; i < 6; i++) 
+  for (int i = 0; i < 6; i++)
   {
     analog_mid[i] = analogRead(joysticks[i]);
   }
@@ -140,25 +185,29 @@ void AusgabePosition()
 
       //Winkelausgabe:
 
-      Serial.print("Achse 1 ");
-      Serial.println(posi[0]);
-      Serial.print("Achse 2 ");
-      Serial.println(posi[1]);
-      Serial.print("Achse 3 ");
-      Serial.println(posi[2]);
-      Serial.print("Achse 4 ");
-      Serial.println(posi[3]);
-      Serial.print("Achse 5 ");
-      Serial.println(posi[4]);
-      Serial.print("Achse 6 ");
-      Serial.println(posi[5]);
-      Serial.println("");
-      Serial.println("");
-      Serial.println("");
-      Serial.println("");
-      Serial.println("");
-      Serial.println("");
-      Serial.println("");
+      Serial.print("Achsen Steps ");
+      for (int i = 0; i < 6; i++) {
+        Serial.print(i);
+        Serial.print(": ");
+        Serial.print(achsen[i].currentPosition());
+        Serial.print(" ");
+      }
+      Serial.println();
+      
+      Serial.print("Moving: ");
+      for (int i = 0; i < 6; i++) {
+        if (achsen[i].isRunning()) {
+          Serial.print(i);
+          Serial.print(": ");
+          Serial.print(achsen[i].targetPosition());
+          Serial.print(",");
+          Serial.print(achsen[i].distanceToGo());
+          Serial.print(",");
+          Serial.print(achsen[i].currentPosition());
+          Serial.print(" ");
+        }
+      }
+      Serial.println();
     }
   }
 }
@@ -236,45 +285,30 @@ void Home()
   }
 }
 
-
-int bewegung(int a_1, int a_2, int a_3, int a_4, int a_5, int a_6, int geschwindigkeit)
+void pos_anfahren(Position pos, int geschwindigkeit)
 {
-  winkel[1] = a_1;
-  winkel[2] = a_2;
-  winkel[3] = a_3;
-  winkel[4] = a_4;
-  winkel[5] = a_5;
-  winkel[6] = a_6;
+  Serial.print("Anfahren: ");
+  for (int i = 0; i < 6; i++) {
+    achsen[i].setMaxSpeed(15000);
+    achsen[i].setAcceleration(10000);
+    achsen[i].moveTo(pos.achsen[i]);
 
-  achse_1.setMaxSpeed(geschwindigkeit * spdfaktor[1]);
-  achse_2.setMaxSpeed(geschwindigkeit * spdfaktor[2]);
-  achse_3.setMaxSpeed(geschwindigkeit * spdfaktor[3]);
-  achse_4.setMaxSpeed(geschwindigkeit * spdfaktor[4]);
-  achse_5.setMaxSpeed(geschwindigkeit * spdfaktor[5]);
-  achse_6.setMaxSpeed(geschwindigkeit * spdfaktor[6]);
-
-  achse_1.setAcceleration(geschwindigkeit * accfaktor[1]);
-  achse_2.setAcceleration(geschwindigkeit * accfaktor[2]);
-  achse_3.setAcceleration(geschwindigkeit * accfaktor[3]);
-  achse_4.setAcceleration(geschwindigkeit * accfaktor[4]);
-  achse_5.setAcceleration(geschwindigkeit * accfaktor[5]);
-  achse_6.setAcceleration(geschwindigkeit * accfaktor[6]);
-
-  achse_1.moveTo(winkel[1] * winkelfaktor[1]);
-  achse_2.moveTo(winkel[2] * winkelfaktor[2]);
-  achse_3.moveTo(winkel[3] * winkelfaktor[3]);
-  achse_4.moveTo(winkel[4] * winkelfaktor[4]);
-  achse_5.moveTo(winkel[5] * winkelfaktor[5]);
-  achse_6.moveTo(winkel[5] * winkelfaktor[6]);
-
-  do
-  {
-    achse_1.run();
-    achse_2.run();
-    achse_3.run();
-    achse_4.run();
-    achse_5.run();
-    achse_6.run();
+    Serial.print(i);
+    Serial.print(" = ");
+    Serial.print(pos.achsen[i]);
+    Serial.print(" ");
   }
-  while (achse_1.run() or achse_2.run() or achse_3.run() or achse_4.run() or achse_5.run() or achse_6.run());
+  Serial.println();
+
+  int moving = 0;
+  do {
+    AusgabePosition();
+    moving = 0;
+    for (int i = 0; i < 6; i++) {
+      if (achsen[i].run()) {
+        moving ++;
+      }
+    }
+  } while (moving > 0);
+
 }
