@@ -99,9 +99,8 @@ void loop()
 {
   AusgabePosition();
   Greifer();
-  Fahren();
+  manuell_Fahren();
   Tastenabfrage();
-  
 }
 
 
@@ -148,7 +147,7 @@ void AusgabePosition()
         Serial.print(" ");
       }
       Serial.println();
-      
+
       Serial.print("Moving: ");
       for (int i = 0; i < 6; i++) {
         if (achsen[i].isRunning()) {
@@ -197,38 +196,33 @@ void Greifer()
 
 void Tastenabfrage()
 {
-  if (digitalRead(joystick_key1) == LOW)
-  {
-   // Home();
-   Position pos;
-   for(int i = 0; i < 6; i++) 
-   {
-    pos.achsen[i] = achsen[i].currentPosition();
-    Serial.println("schreiben");
-    speichern(0, pos);
-    Serial.println("geschrieben");
-   }
-  }
   if (digitalRead(joystick_key3) == LOW)
   {
-     if (millis() - previousMicros >= 1000)
-    {
-      previousMicros = millis();
-      Position pos = { { 0, 0, 0, 0, 0, 0}, 0 };
-      Serial.println("wird geladen");
-      laden(0, pos);
-      Serial.println("geladen");
-      pos_anfahren(pos, 10);
-      Serial.println("angefahren");
-      Serial.println(pos.achsen[0]);
-    }
+    automatisch_Anfahren();
+  }
+  if (digitalRead(joystick_key1) == LOW)
+  {
+    punkt_speichern();
   }
   if (digitalRead(joystick_key3) == LOW && digitalRead(joystick_key2) == LOW)
   {
     Zero();
   }
 }
-void Fahren()
+
+void punkt_speichern()
+{
+  Position pos;
+  for (int i = 0; i < 6; i++)
+  {
+    pos.achsen[i] = achsen[i].currentPosition();
+    Serial.println("schreiben");
+    speichern(0, pos);
+    Serial.println("geschrieben");
+  }
+}
+
+void manuell_Fahren()
 {
   for (int i = 0; i < 6; i++)
   {
@@ -251,6 +245,25 @@ void Fahren()
   }
 }
 
+void automatisch_Anfahren()
+{
+  if (millis() - previousMicros >= 100)
+  {
+    previousMicros = millis();
+    int count = 0;
+    count++;
+    if (count >= 10)
+    {
+      Position pos = { { 0, 0, 0, 0, 0, 0}, 0 };
+      Serial.println("wird geladen");
+      laden(0, pos);
+      Serial.println("geladen");
+      pos_anfahren(pos, 10);
+      Serial.println("angefahren");
+      Serial.println(pos.achsen[0]);
+    }
+  }
+}
 
 void Zero()
 {
@@ -308,7 +321,7 @@ void speichern(int index, Position pos)
   }
 }
 
-void laden(int index, Position& pos)
+void laden(int index, Position & pos)
 {
   int addr = index * sizeof(Position);
   uint8_t* p_pos = reinterpret_cast<char*>(&pos);
@@ -317,4 +330,3 @@ void laden(int index, Position& pos)
     *(p_pos + i) = EEPROM.read(addr + i);
   }
 }
-
