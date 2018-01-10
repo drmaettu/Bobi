@@ -77,7 +77,6 @@ void setup()
   {
     achsen[i].setMaxSpeed(max_spd);
   }
-
   setPinsTo(OUTPUT, dir_pins, 6);
   setPinsTo(OUTPUT, stp_pins, 6);
   setPinsTo(OUTPUT, (const int[]) {
@@ -98,12 +97,9 @@ void setup()
 void loop()
 {
   AusgabePosition();
-  Greifer();
-  Fahren();
+  manuell_Fahren();
   Tastenabfrage();
-  
 }
-
 
 void setPinsTo(int mode, const int pins[], int count)
 {
@@ -113,7 +109,6 @@ void setPinsTo(int mode, const int pins[], int count)
   }
 }
 
-
 void calibrateJoysticks()
 {
   for (int i = 0; i < 6; i++)
@@ -121,7 +116,6 @@ void calibrateJoysticks()
     analog_mid[i] = analogRead(joysticks[i]);
   }
 }
-
 
 void AusgabePosition()
 {
@@ -148,7 +142,7 @@ void AusgabePosition()
         Serial.print(" ");
       }
       Serial.println();
-      
+
       Serial.print("Moving: ");
       for (int i = 0; i < 6; i++) {
         if (achsen[i].isRunning()) {
@@ -171,26 +165,20 @@ void Greifer()
 {
   if (gripper_state == 1)
   {
-    if (digitalRead(joystick_key2) == LOW)
+    for (pos = opened; pos <= closed; pos += 2)
     {
-      for (pos = opened; pos <= closed; pos += 2)
-      {
-        gripper.write(pos);
-        delay(5);
-        gripper_state = 0;
-      }
+      gripper.write(pos);
+      delay(5);
+      gripper_state = 0;
     }
   }
   else
   {
-    if (digitalRead(joystick_key2) == LOW)
+    for (pos = closed; pos >= opened; pos -= 2)
     {
-      for (pos = closed; pos >= opened; pos -= 2)
-      {
-        gripper.write(pos);
-        delay(5);
-        gripper_state = 1;
-      }
+      gripper.write(pos);
+      delay(5);
+      gripper_state = 1;
     }
   }
 }
@@ -199,19 +187,41 @@ void Tastenabfrage()
 {
   if (digitalRead(joystick_key1) == LOW)
   {
-   // Home();
-   Position pos;
-   for(int i = 0; i < 6; i++) 
-   {
+    punkt_speichern();
+  }
+  if (digitalRead(joystick_key2) == LOW)
+  {
+    Greifer();
+  }
+  if (digitalRead(joystick_key3) == LOW)
+  {
+    automatisch_Fahren();
+  }
+  if (digitalRead(joystick_key3) == LOW && digitalRead(joystick_key2) == LOW)
+  {
+    Zero();
+  }
+}
+
+void punkt_speichern()
+{
+  Position pos;
+  for (int i = 0; i < 6; i++)
+  {
     pos.achsen[i] = achsen[i].currentPosition();
     Serial.println("schreiben");
     speichern(0, pos);
     Serial.println("geschrieben");
-   }
   }
-  if (digitalRead(joystick_key3) == LOW)
+}
+
+void automatisch_Fahren()
+{
+  int count = 0;
+  if (millis() - previousMicros >= 100)
   {
-     if (millis() - previousMicros >= 1000)
+    count++;
+    if (count >= 10)
     {
       previousMicros = millis();
       Position pos = { { 0, 0, 0, 0, 0, 0}, 0 };
@@ -223,12 +233,9 @@ void Tastenabfrage()
       Serial.println(pos.achsen[0]);
     }
   }
-  if (digitalRead(joystick_key3) == LOW && digitalRead(joystick_key2) == LOW)
-  {
-    Zero();
-  }
 }
-void Fahren()
+
+void manuell_Fahren()
 {
   for (int i = 0; i < 6; i++)
   {
@@ -250,7 +257,6 @@ void Fahren()
     }
   }
 }
-
 
 void Zero()
 {
@@ -296,8 +302,8 @@ void pos_anfahren(Position pos, int geschwindigkeit)
       }
     }
   } while (moving > 0);
-
 }
+
 void speichern(int index, Position pos)
 {
   int addr = index * sizeof(Position);
