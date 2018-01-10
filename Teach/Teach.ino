@@ -185,6 +185,7 @@ void Greifer()
 
 void Tastenabfrage()
 {
+  int count = 0;
   if (digitalRead(joystick_key1) == LOW)
   {
     punkt_speichern();
@@ -195,7 +196,19 @@ void Tastenabfrage()
   }
   if (digitalRead(joystick_key3) == LOW)
   {
-    automatisch_Fahren();
+    if (millis() - previousMicros >= 100)
+    {
+      count++;
+      previousMicros = millis();
+      if (count >= 10)
+      {
+        automatisch_Fahren();
+      }
+    }
+  }
+  else
+  {
+    count = 0;
   }
   if (digitalRead(joystick_key3) == LOW && digitalRead(joystick_key2) == LOW)
   {
@@ -217,22 +230,13 @@ void punkt_speichern()
 
 void automatisch_Fahren()
 {
-  int count = 0;
-  if (millis() - previousMicros >= 100)
-  {
-    count++;
-    if (count >= 10)
-    {
-      previousMicros = millis();
-      Position pos = { { 0, 0, 0, 0, 0, 0}, 0 };
-      Serial.println("wird geladen");
-      laden(0, pos);
-      Serial.println("geladen");
-      pos_anfahren(pos, 10);
-      Serial.println("angefahren");
-      Serial.println(pos.achsen[0]);
-    }
-  }
+  Position pos = { { 0, 0, 0, 0, 0, 0}, 0 };
+  Serial.println("wird geladen");
+  laden(0, pos);
+  Serial.println("geladen");
+  pos_anfahren(pos, 10);
+  Serial.println("angefahren");
+  Serial.println(pos.achsen[0]);
 }
 
 void manuell_Fahren()
@@ -291,17 +295,20 @@ void pos_anfahren(Position pos, int geschwindigkeit)
     Serial.print(" ");
   }
   Serial.println();
-
   int moving = 0;
-  do {
+  do
+  {
     AusgabePosition();
     moving = 0;
-    for (int i = 0; i < 6; i++) {
-      if (achsen[i].run()) {
+    for (int i = 0; i < 6; i++)
+    {
+      if (achsen[i].run())
+      {
         moving ++;
       }
     }
-  } while (moving > 0);
+  }
+  while (moving > 0);
 }
 
 void speichern(int index, Position pos)
@@ -314,7 +321,7 @@ void speichern(int index, Position pos)
   }
 }
 
-void laden(int index, Position& pos)
+void laden(int index, Position & pos)
 {
   int addr = index * sizeof(Position);
   uint8_t* p_pos = reinterpret_cast<char*>(&pos);
