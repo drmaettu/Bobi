@@ -60,7 +60,9 @@ float posi[6];
 float winkel[6];
 int steps[6];
 unsigned long previousMicros;
-
+int count1 = 0;
+int count2 = 0;
+int count3 = 0;
 int closed = 160;
 int opened = 20;
 int pos = 20;
@@ -92,6 +94,8 @@ void setup()
 
   calibrateJoysticks();
   Serial.println("Setup gmacht");
+  gripper.write(opened);
+  Home();
 }
 
 void loop()
@@ -185,22 +189,37 @@ void Greifer()
 
 void Tastenabfrage()
 {
-  int count = 0;
   if (digitalRead(joystick_key1) == LOW)
   {
     punkt_speichern();
   }
   if (digitalRead(joystick_key2) == LOW)
   {
+    if (millis() - previousMicros >= 100)
+    {
+      count2++;
+      previousMicros = millis();
+      if (count2 >= 10)
+      {
+        Home();
+      }
+    }
+    if (count2 == 0)
+    {
     Greifer();
+    }
+  }
+  else
+  {
+    count2 = 0;
   }
   if (digitalRead(joystick_key3) == LOW)
   {
     if (millis() - previousMicros >= 100)
     {
-      count++;
+      count3++;
       previousMicros = millis();
-      if (count >= 10)
+      if (count3 >= 10)
       {
         automatisch_Fahren();
       }
@@ -208,7 +227,7 @@ void Tastenabfrage()
   }
   else
   {
-    count = 0;
+    count3 = 0;
   }
   if (digitalRead(joystick_key3) == LOW && digitalRead(joystick_key2) == LOW)
   {
@@ -274,10 +293,14 @@ void Home()
 {
   for (int i = 0; i < 6; i++)
   {
+    do
+    {
     achsen[i].setMaxSpeed(10000);
     achsen[i].setAcceleration(10000);
     achsen[i].moveTo(0);
     achsen[i].run();
+    }
+    while (achsen[i].run() == true);
   }
 }
 
