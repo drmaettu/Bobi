@@ -173,7 +173,6 @@ void Greifer()
     {
       gripper.write(pos);
       delay(5);
-      gripper_state = 0;
     }
   }
   else
@@ -182,8 +181,11 @@ void Greifer()
     {
       gripper.write(pos);
       delay(5);
-      gripper_state = 1;
     }
+  }
+  if (digitalWrite(joystick_key2) == HIGH)
+  {
+    gripper_state = !gripper_state;
   }
 }
 
@@ -353,4 +355,3 @@ void laden(int index, Position & pos)
     *(p_pos + i) = EEPROM.read(addr + i);
   }
 }
-
