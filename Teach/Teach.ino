@@ -129,7 +129,7 @@ void AusgabePosition()
   }
   bool send_pos = true;
 
-  if (millis() - previousMicros >= 1000)
+  if (millis() - previousMicros >= 2000)
   {
     if (send_pos == true)
     {
@@ -138,28 +138,30 @@ void AusgabePosition()
 
       //Winkelausgabe:
 
-      Serial.print("Achsen Steps ");
+      Serial.println("Achsposition in Steps ");
       for (int i = 0; i < 6; i++) {
         Serial.print(i);
         Serial.print(": ");
         Serial.print(achsen[i].currentPosition());
-        Serial.print(" ");
+        Serial.println(" ");
       }
       Serial.println();
+      AusgabeManual();
+      /*
+            Serial.print("Moving: ");
+            for (int i = 0; i < 6; i++) {
+              if (achsen[i].isRunning()) {
+                Serial.print(i);
+                Serial.print(": ");
+                Serial.print(achsen[i].targetPosition());
+                Serial.print(",");
+                Serial.print(achsen[i].distanceToGo());
+                Serial.print(",");
+                Serial.print(achsen[i].currentPosition());
+                Serial.print(" ");
 
-      Serial.print("Moving: ");
-      for (int i = 0; i < 6; i++) {
-        if (achsen[i].isRunning()) {
-          Serial.print(i);
-          Serial.print(": ");
-          Serial.print(achsen[i].targetPosition());
-          Serial.print(",");
-          Serial.print(achsen[i].distanceToGo());
-          Serial.print(",");
-          Serial.print(achsen[i].currentPosition());
-          Serial.print(" ");
-        }
-      }
+              }
+            }*/
       Serial.println();
     }
   }
@@ -174,6 +176,8 @@ void Greifer()
       gripper.write(pos);
       delay(5);
     }
+    gripper_state = !gripper_state;
+    Serial.println("Greiferstatus gewechselt");
   }
   else
   {
@@ -182,15 +186,27 @@ void Greifer()
       gripper.write(pos);
       delay(5);
     }
+    gripper_state = !gripper_state;
+    Serial.println("Greiferstatus gewechselt");
+
   }
-  if (digitalWrite(joystick_key2) == HIGH)
+  /*
+  if (digitalRead(joystick_key2) == HIGH)
   {
     gripper_state = !gripper_state;
+    Serial.println("Greiferstatus gewechselt");
   }
+  */
 }
-
 void Tastenabfrage()
 {
+  //Taste 1 kurz - Punkt speichern
+  //Taste 1 lang - Keine Funktion
+  //Taste 2 kurz - Greifer öffnen/schliessen
+  //Taste 2 lang - Home
+  //Taste 3 kurz - Zero
+  //Taste 3 lang - Punkt Anfahren
+
   if (digitalRead(joystick_key1) == LOW)
   {
     punkt_speichern();
@@ -206,14 +222,15 @@ void Tastenabfrage()
         Home();
       }
     }
+    else
+    {
+      count2 = 0;
+    }
     if (count2 == 0)
     {
-    Greifer();
+      Serial.println("Greifer muss bewegen");
+      Greifer();
     }
-  }
-  else
-  {
-    count2 = 0;
   }
   if (digitalRead(joystick_key3) == LOW)
   {
@@ -288,21 +305,24 @@ void Zero()
   for (int i = 0; i < 6; i++)
   {
     achsen[i].setCurrentPosition(0);
+    Serial.println("Alle Achsen genullt");
   }
 }
 
 void Home()
 {
+  Serial.println("Homing im Gange");
   for (int i = 0; i < 6; i++)
   {
     do
     {
-    achsen[i].setMaxSpeed(10000);
-    achsen[i].setAcceleration(10000);
-    achsen[i].moveTo(0);
-    achsen[i].run();
+      achsen[i].setMaxSpeed(10000);
+      achsen[i].setAcceleration(10000);
+      achsen[i].moveTo(0);
+      achsen[i].run();
     }
     while (achsen[i].run() == true);
+
   }
 }
 
@@ -355,3 +375,14 @@ void laden(int index, Position & pos)
     *(p_pos + i) = EEPROM.read(addr + i);
   }
 }
+void AusgabeManual()
+{
+  Serial.println("Optionen: ");
+  Serial.println("Taste 1 kurz - Punkt speichern");
+  Serial.println("Taste 1 lang - Keine Funktion");
+  Serial.println("Taste 2 kurz - Greifer öffnen/schliessen");
+  Serial.println("Taste 2 lang - Home");
+  Serial.println("Taste 3 kurz - Zero");
+  Serial.println("Taste 3 lang - Punkt Anfahren");
+}
+
