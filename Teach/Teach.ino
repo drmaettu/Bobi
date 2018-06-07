@@ -169,6 +169,7 @@ void AusgabePosition()
 
 void Greifer()
 {
+  Serial.println("Greiferaktion");
   if (gripper_state == 1)
   {
     for (pos = opened; pos <= closed; pos += 2)
@@ -177,7 +178,7 @@ void Greifer()
       delay(5);
     }
     gripper_state = !gripper_state;
-    Serial.println("Greiferstatus gewechselt");
+    Serial.println("Greifer geschlossen");
   }
   else
   {
@@ -187,51 +188,97 @@ void Greifer()
       delay(5);
     }
     gripper_state = !gripper_state;
-    Serial.println("Greiferstatus gewechselt");
+    Serial.println("Greifer offen");
 
   }
-  /*
-  if (digitalRead(joystick_key2) == HIGH)
-  {
-    gripper_state = !gripper_state;
-    Serial.println("Greiferstatus gewechselt");
-  }
-  */
 }
+
 void Tastenabfrage()
 {
-  //Taste 1 kurz - Punkt speichern
-  //Taste 1 lang - Keine Funktion
-  //Taste 2 kurz - Greifer öffnen/schliessen
+  //Taste 1 kurz - Keine Funktion
+  //Taste 1 lang - Punkt speichern
+  //Taste 2 kurz - Greifer oeffnen/schliessen
   //Taste 2 lang - Home
-  //Taste 3 kurz - Zero
+  //Taste 3 kurz - Keine Funktion
   //Taste 3 lang - Punkt Anfahren
+  //Taste 2 & 3 zusammen - Zero
 
+  //Taste 1
   if (digitalRead(joystick_key1) == LOW)
   {
-    punkt_speichern();
-  }
-  if (digitalRead(joystick_key2) == LOW)
-  {
+    //Serial.println(count1);
     if (millis() - previousMicros >= 100)
     {
-      count2++;
+      count1++;
       previousMicros = millis();
-      if (count2 >= 10)
+      if (count1 >= 10)
+      {
+        //Aktion für langen Tastendruck
+        punkt_speichern();
+      }
+    }
+    if (count1 < 10)
+    {
+      //Aktion für kurzen Tastendruck
+    }
+  }
+  else
+  {
+    count1 = 0;
+  }
+
+  //Taste 2
+
+  if (digitalRead(joystick_key2) == LOW)
+  {
+    delay(50);
+    if (digitalRead(joystick_key2) == LOW)
+    {
+      count2++;
+      if (count2 >= 20)
       {
         Home();
+        count2 = 0;
+        do
+        {
+        }
+        while (digitalRead(joystick_key2) == LOW);
       }
     }
     else
     {
+      Greifer();
       count2 = 0;
     }
-    if (count2 == 0)
-    {
-      Serial.println("Greifer muss bewegen");
-      Greifer();
-    }
   }
+
+  /*
+
+    if (digitalRead(joystick_key2) == LOW)
+    {
+      //Serial.println(count2);
+      if (millis() - previousMicros >= 100)
+      {
+        count2++;
+        previousMicros = millis();
+      }
+      if (digitalRead(joystick_key2) == HIGH)
+      {
+        if (count2 < 10)
+        {
+          Greifer();
+          count2 = 0;
+        }
+        else
+        {
+          Home();
+          count2 = 0;
+        }
+      }
+    }
+  */
+
+  //Taste 3
   if (digitalRead(joystick_key3) == LOW)
   {
     if (millis() - previousMicros >= 100)
@@ -240,7 +287,12 @@ void Tastenabfrage()
       previousMicros = millis();
       if (count3 >= 10)
       {
+        //Aktion für langen Tastendruck
         automatisch_Fahren();
+      }
+      if (count3 < 10)
+      {
+        //Aktion für kurzen Tastendruck
       }
     }
   }
@@ -253,6 +305,7 @@ void Tastenabfrage()
     Zero();
   }
 }
+
 
 void punkt_speichern()
 {
@@ -314,36 +367,36 @@ void Home()
   Serial.println("Homing im Gange");
   for (int i = 0; i < 6; i++)
   {
-    do
-    {
-      achsen[i].setMaxSpeed(10000);
-      achsen[i].setAcceleration(10000);
-      achsen[i].moveTo(0);
-      achsen[i].run();
-    }
-    while (achsen[i].run() == true);
-
+    achsen[i].setMaxSpeed(10000);
+    achsen[i].setAcceleration(10000);
+    achsen[i].moveTo(0);
   }
+  int moving = 0;
+  do
+  {
+    moving = 0;
+    for (int i = 0; i < 6; i++)
+    {
+      if (achsen[i].run())
+      {
+        moving ++;
+      }
+    }
+  }
+  while (moving > 0);
 }
 
 void pos_anfahren(Position pos, int geschwindigkeit)
 {
   Serial.print("Anfahren: ");
   for (int i = 0; i < 6; i++) {
-    achsen[i].setMaxSpeed(15000);
+    achsen[i].setMaxSpeed(10000);
     achsen[i].setAcceleration(10000);
     achsen[i].moveTo(pos.achsen[i]);
-
-    Serial.print(i);
-    Serial.print(" = ");
-    Serial.print(pos.achsen[i]);
-    Serial.print(" ");
   }
-  Serial.println();
   int moving = 0;
   do
   {
-    AusgabePosition();
     moving = 0;
     for (int i = 0; i < 6; i++)
     {
@@ -378,11 +431,12 @@ void laden(int index, Position & pos)
 void AusgabeManual()
 {
   Serial.println("Optionen: ");
-  Serial.println("Taste 1 kurz - Punkt speichern");
-  Serial.println("Taste 1 lang - Keine Funktion");
+  Serial.println("Taste 1 kurz - Keine Funktion");
+  Serial.println("Taste 1 lang - Punkt speichern");
   Serial.println("Taste 2 kurz - Greifer öffnen/schliessen");
   Serial.println("Taste 2 lang - Home");
-  Serial.println("Taste 3 kurz - Zero");
+  Serial.println("Taste 3 kurz - Keine Funktion");
   Serial.println("Taste 3 lang - Punkt Anfahren");
+  Serial.println("Taste 2 & 3 zusammen - Zero");
 }
 
